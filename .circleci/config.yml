@@ -1,0 +1,24 @@
+version: 2
+
+jobs:
+  deploy:
+    docker:
+      - image: hashicorp/terraform
+
+    steps:
+      - checkout
+
+      - run:
+          name: Initialize Terraform
+          command: terraform init
+
+      - run:
+          name: Deploy
+          command: terraform apply -auto-approve
+
+workflows:
+  version: 2
+  deploy:
+    jobs:
+      - deploy:
+          context: Deployment

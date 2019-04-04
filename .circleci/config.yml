@@ -13,7 +13,6 @@ jobs:
           command: |
             apk update
             apk add make
-            make
 
       - run:
           name: Build the HTML files

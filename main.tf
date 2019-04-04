@@ -43,6 +43,7 @@ resource "aws_s3_bucket_object" "index_html" {
   bucket       = "${aws_s3_bucket.site.bucket}"
   key          = "${local.languages[count.index]}/index.html"
   source       = "public/index-${local.languages[count.index]}.html"
+  etag         = "${filemd5(format("public/index-%s.html", local.languages[count.index]))}"
   acl          = "public-read"
   content_type = "text/html; charset=utf-8"
 }

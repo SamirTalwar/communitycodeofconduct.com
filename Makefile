@@ -13,7 +13,7 @@ TEMP_CONTENT_FILE := $(TMPDIR)/communitycodeofconduct-content
 .PHONY: all
 all: $(OUTPUT)
 
-public/index-%.html: src/content/%.html
+public/index-%.html: src/content/%.html src/index.html
 	@ echo $< '->' $@
 	@ if [[ -e 'src/titles/$*.html' ]]; then \
 		$(SED) -r -e 's/^/    /' -e 's/\s+$$//' src/titles/$*.html > $(TEMP_TITLE_FILE); \

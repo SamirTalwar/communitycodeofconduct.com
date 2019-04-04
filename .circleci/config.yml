@@ -9,6 +9,18 @@ jobs:
       - checkout
 
       - run:
+          name: Install make
+          command: |
+            apk update
+            apk add make
+            make
+
+      - run:
+          name: Build the HTML files
+          command: |
+            make
+
+      - run:
           name: Initialize Terraform
           command: terraform init
 

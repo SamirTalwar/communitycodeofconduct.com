@@ -20,38 +20,42 @@ locals {
     "tr",
   ]
 
-  default_language = "${local.languages[0]}"
+  default_language = local.languages[0]
 
-  distribution_domains = "${concat(list(local.domain), formatlist("%s.%s", local.languages, local.domain))}"
+  distribution_domains = concat(
+    [local.domain],
+    formatlist("%s.%s", local.languages, local.domain),
+  )
 
-  distribution_prefixes = "${formatlist("/%s", concat(list(local.default_language), local.languages))}"
+  distribution_prefixes = formatlist("/%s", concat([local.default_language], local.languages))
 }
 
 provider "aws" {
   region = "eu-west-1"
 }
 
-provider "cloudflare" {}
+provider "cloudflare" {
+}
 
 resource "aws_s3_bucket" "site" {
-  bucket = "${local.domain}"
+  bucket = local.domain
 }
 
 resource "aws_s3_bucket_object" "index_html" {
-  count = "${length(local.languages)}"
+  count = length(local.languages)
 
-  bucket       = "${aws_s3_bucket.site.bucket}"
+  bucket       = aws_s3_bucket.site.bucket
   key          = "${local.languages[count.index]}/index.html"
   source       = "public/index-${local.languages[count.index]}.html"
-  etag         = "${filemd5(format("public/index-%s.html", local.languages[count.index]))}"
+  etag         = filemd5(format("public/index-%s.html", local.languages[count.index]))
   acl          = "public-read"
   content_type = "text/html; charset=utf-8"
 }
 
 resource "aws_s3_bucket_object" "favicon_ico" {
-  count = "${length(local.languages)}"
+  count = length(local.languages)
 
-  bucket       = "${aws_s3_bucket.site.bucket}"
+  bucket       = aws_s3_bucket.site.bucket
   key          = "${local.languages[count.index]}/favicon.ico"
   source       = "public/favicon.ico"
   acl          = "public-read"
@@ -59,14 +63,20 @@ resource "aws_s3_bucket_object" "favicon_ico" {
 }
 
 resource "aws_cloudfront_distribution" "site_distribution" {
-  count = "${length(local.languages)}"
+  count = length(local.languages)
 
   enabled             = true
   default_root_object = "index.html"
-  aliases             = "${compact(list(local.languages[count.index] == local.default_language ? local.domain : "", local.languages[count.index] == local.default_language ? format("www.%s", local.domain) : "", format("%s.%s", local.languages[count.index], local.domain)))}"
+  aliases = compact(
+    [
+      local.languages[count.index] == local.default_language ? local.domain : "",
+      local.languages[count.index] == local.default_language ? format("www.%s", local.domain) : "",
+      format("%s.%s", local.languages[count.index], local.domain),
+    ],
+  )
 
   origin {
-    domain_name = "${aws_s3_bucket.site.bucket_regional_domain_name}"
+    domain_name = aws_s3_bucket.site.bucket_regional_domain_name
     origin_id   = "S3-${local.domain}"
     origin_path = "/${local.languages[count.index]}"
   }
@@ -102,47 +112,47 @@ resource "aws_cloudfront_distribution" "site_distribution" {
 }
 
 resource "cloudflare_record" "root" {
-  domain  = "${local.domain}"
+  domain  = local.domain
   name    = "@"
   type    = "CNAME"
-  value   = "${aws_cloudfront_distribution.site_distribution.0.domain_name}"
+  value   = aws_cloudfront_distribution.site_distribution[0].domain_name
   proxied = true
 }
 
 resource "cloudflare_record" "www" {
-  domain  = "${local.domain}"
+  domain  = local.domain
   name    = "www"
   type    = "CNAME"
-  value   = "${local.domain}"
+  value   = local.domain
   proxied = true
 }
 
 resource "cloudflare_record" "language" {
-  count = "${length(local.languages)}"
+  count = length(local.languages)
 
-  domain  = "${local.domain}"
-  name    = "${local.languages[count.index]}"
+  domain  = local.domain
+  name    = local.languages[count.index]
   type    = "CNAME"
-  value   = "${local.domain}"
+  value   = local.domain
   proxied = true
 }
 
 resource "cloudflare_page_rule" "always_use_https" {
-  zone     = "${local.domain}"
+  zone     = local.domain
   target   = "http://*${local.domain}/*"
   priority = 1
 
-  actions = {
+  actions {
     always_use_https = true
   }
 }
 
 resource "cloudflare_page_rule" "redirect_www" {
-  zone     = "${local.domain}"
+  zone     = local.domain
   target   = "www.${local.domain}/*"
   priority = 2
 
-  actions = {
+  actions {
     forwarding_url {
       url         = "https://${local.domain}/$1"
       status_code = 301

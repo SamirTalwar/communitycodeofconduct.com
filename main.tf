@@ -34,8 +34,7 @@ provider "aws" {
   region = "eu-west-1"
 }
 
-provider "cloudflare" {
-}
+provider "cloudflare" {}
 
 resource "aws_s3_bucket" "site" {
   bucket = local.domain
@@ -111,8 +110,12 @@ resource "aws_cloudfront_distribution" "site_distribution" {
   }
 }
 
+resource "cloudflare_zone" "site" {
+  zone = local.domain
+}
+
 resource "cloudflare_record" "root" {
-  domain  = local.domain
+  zone_id = cloudflare_zone.site.id
   name    = "@"
   type    = "CNAME"
   value   = aws_cloudfront_distribution.site_distribution[0].domain_name
@@ -120,7 +123,7 @@ resource "cloudflare_record" "root" {
 }
 
 resource "cloudflare_record" "www" {
-  domain  = local.domain
+  zone_id = cloudflare_zone.site.id
   name    = "www"
   type    = "CNAME"
   value   = local.domain
@@ -130,7 +133,7 @@ resource "cloudflare_record" "www" {
 resource "cloudflare_record" "language" {
   count = length(local.languages)
 
-  domain  = local.domain
+  zone_id = cloudflare_zone.site.id
   name    = local.languages[count.index]
   type    = "CNAME"
   value   = local.domain
@@ -138,7 +141,7 @@ resource "cloudflare_record" "language" {
 }
 
 resource "cloudflare_page_rule" "always_use_https" {
-  zone     = local.domain
+  zone_id  = cloudflare_zone.site.id
   target   = "http://*${local.domain}/*"
   priority = 1
 
@@ -148,7 +151,7 @@ resource "cloudflare_page_rule" "always_use_https" {
 }
 
 resource "cloudflare_page_rule" "redirect_www" {
-  zone     = local.domain
+  zone_id  = cloudflare_zone.site.id
   target   = "www.${local.domain}/*"
   priority = 2
 
